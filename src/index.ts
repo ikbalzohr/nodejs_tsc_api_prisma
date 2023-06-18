@@ -5,12 +5,13 @@ import cors from 'cors'
 import { routes } from './routes'
 import { logger } from './utils/logger'
 import deserializeToken from './middleware/deserialized_token'
+import CONFIG from './config/environment'
 
-// connect DB
-import './utils/connectToDB'
+// connect database
+import './utils/database'
 
 const app: Application = express()
-const port: number = 4000
+const port: number = CONFIG.port || 4000
 
 // parse body request
 app.use(bodyParser.urlencoded({ extended: false }))

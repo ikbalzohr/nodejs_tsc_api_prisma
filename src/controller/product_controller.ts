@@ -6,7 +6,6 @@ import {
   addProductToDB,
   deleteProductById,
   getProductById,
-  getProductByName,
   getProductFromDB,
   updateProductById
 } from '../services/product_service'
@@ -16,12 +15,6 @@ export async function createProduct(req: Request, res: Response): Promise<any> {
   if (error) {
     logger.error(`Product - create = ${error.details[0].message}`)
     return res.status(422).send({ status: false, statusCode: 422, message: error.details[0].message })
-  }
-
-  const result = await getProductByName(value.name)
-  if (result?.name) {
-    logger.error('Product - create = Data already exists')
-    return res.status(403).send({ status: false, statusCode: 403, message: 'Data already exists' })
   }
   try {
     const result = await addProductToDB(value)
@@ -40,11 +33,12 @@ export async function getProduct(req: Request, res: Response): Promise<any> {
 
   if (id) {
     try {
-      const result = await getProductById(id)
+      const result = await getProductById(parseInt(id))
       if (result) {
         logger.info('Success get product data')
         return res.status(200).send({ status: true, statusCode: 200, data: result })
       } else {
+        logger.info('Data Not Found')
         return res.status(404).send({ status: true, statusCode: 404, message: 'Data Not Found', data: {} })
       }
     } catch (error) {
@@ -69,7 +63,7 @@ export async function updateProduct(req: Request, res: Response): Promise<any> {
   }
 
   try {
-    const result = await updateProductById(id, value)
+    const result = await updateProductById(parseInt(id), value)
     if (result) {
       logger.info('Success update product')
       return res.status(200).send({ status: true, statusCode: 200, message: 'Update product success', data: result })
@@ -89,7 +83,7 @@ export async function deleteProduct(req: Request, res: Response): Promise<any> {
   } = req
 
   try {
-    const result = await deleteProductById(id)
+    const result = await deleteProductById(parseInt(id))
     if (result) {
       logger.info('Success delete product')
       return res.status(200).send({ status: true, statusCode: 200, message: 'Delete product success', data: result })

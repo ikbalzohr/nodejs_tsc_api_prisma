@@ -1,41 +1,39 @@
-import { logger } from '../utils/logger'
-import productModel from '../models/product_model'
 import type ProductType from '../types/product_type'
+import { PrismaClient, type Product } from '@prisma/client'
 
-export const getProductFromDB = async (): Promise<any> => {
-  return await productModel
-    .find()
-    .then((data) => {
-      return data
-    })
-    .catch((error) => {
-      logger.info('Cannot get data from DB')
-      logger.error(error)
-    })
-}
+const prisma = new PrismaClient()
 
-export const getProductById = async (id: string): Promise<any> => {
-  const result = await productModel.findOne({ _id: id })
+export const getProductFromDB = async (): Promise<Product[]> => {
+  const result = await prisma.product.findMany()
   return result
 }
 
-export const getProductByName = async (name: string): Promise<any> => {
-  return await productModel.findOne({ name: { $regex: name, $options: 'i' } })
+export const getProductById = async (id: number): Promise<Product | null> => {
+  const result = await prisma.product.findUnique({
+    where: { id }
+  })
+  return result
 }
 
-export const addProductToDB = async (payload: ProductType): Promise<any> => {
-  return await productModel.create(payload)
+export const addProductToDB = async (data: ProductType): Promise<Product> => {
+  const result = await prisma.product.create({
+    data
+  })
+  // return await productModel.create(payload)
+  return result
 }
 
-export const updateProductById = async (id: string, payload: ProductType): Promise<any> => {
-  return await productModel.findOneAndUpdate(
-    {
-      _id: id
-    },
-    { $set: payload }
-  )
+export const updateProductById = async (id: number, data: ProductType): Promise<any> => {
+  const result = await prisma.product.update({
+    where: { id },
+    data
+  })
+  return result
 }
 
-export const deleteProductById = async (id: string): Promise<any> => {
-  return await productModel.findByIdAndDelete({ _id: id })
+export const deleteProductById = async (id: number): Promise<any> => {
+  const result = await prisma.product.delete({
+    where: { id }
+  })
+  return result
 }
