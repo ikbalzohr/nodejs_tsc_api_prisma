@@ -21,7 +21,7 @@ Branch ini merupakan finishing dari semua branch.
 - Cors
 - Joi
 - Controller
-- Connect MongoDB
+- Connect SQL Database
 - CRUD
 - Authentication and authorization
 - Refresh Token
@@ -29,7 +29,6 @@ Branch ini merupakan finishing dari semua branch.
 ### Fitur yang tidak didukung:
 - Jest
 - Supertest
-- MongoDB Memory Server
 - Belum terdapat function createServer
 
 ### Note
