@@ -8,7 +8,7 @@ const databasePrisma = async (): Promise<void> => {
     await prisma.$connect()
     logger.info('Connected to the database')
   } catch (error) {
-    logger.error('Failed to connect to the database:', error)
+    logger.error('Failed to connect to the database ->', error)
   } finally {
     await prisma.$disconnect()
   }
