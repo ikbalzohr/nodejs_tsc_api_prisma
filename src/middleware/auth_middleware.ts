@@ -17,3 +17,12 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): a
 
   next()
 }
+
+export const requireSuperAdmin = (req: Request, res: Response, next: NextFunction): any => {
+  const user = res.locals.user
+  if (!user || user.role !== 'super_admin') {
+    return res.sendStatus(403)
+  }
+
+  next()
+}

@@ -8,15 +8,26 @@ datasource db {
 }
 
 model User {
-  email     String    @id @db.VarChar(100)
-  password  String    @db.VarChar(100)
-  name      String    @db.VarChar(100)
-  role      String    @default("reguler") @db.VarChar(100)
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @unique
+  email     String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(100)
+  role      String   @default("reguler") @db.VarChar(100)
+  profile   Profile?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+model Profile {
+  id        String   @id @unique
+  name      String   @db.VarChar(100)
+  user      User     @relation(fields: [user_id], references: [id])
+  user_id   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
 }
 
 model Product {
@@ -24,8 +35,6 @@ model Product {
   price     Int      @db.Int
   name      String   @db.VarChar(100)
   size      String   @db.VarChar(100)
-  User      User?    @relation(fields: [userEmail], references: [email])
-  userEmail String?  @db.VarChar(100)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

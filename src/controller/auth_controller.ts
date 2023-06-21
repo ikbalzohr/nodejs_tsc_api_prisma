@@ -1,25 +1,19 @@
 import { type Request, type Response } from 'express'
-
-import {
-  addUserValidation,
-  createSessionValidation,
-  refreshSessionValidation,
-  updatePasswordValidation,
-  updateUserValidation
-} from '../validation/auth_validation'
 import { logger } from '../utils/logger'
 import { checkPassword, hashing } from '../utils/hashing'
+import { v4 as uuidv4 } from 'uuid'
 import {
-  addUser,
-  deleteUserByEmail,
-  findUserByEmail,
-  updatePasswordByEmail,
-  updateUserByEmail
-} from '../services/auth_service'
+  addUserValidation,
+  loginValidation,
+  refreshSessionValidation,
+  updatePasswordValidation
+} from '../validation/auth_validation'
+import { addUser, deleteUserByEmail, findUserByEmail, updatePasswordByEmail } from '../services/auth_service'
 import { signJWT, verifyJWT } from '../utils/jwt'
 
 // register
 export async function registerUser(req: Request, res: Response): Promise<any> {
+  req.body.id = uuidv4()
   const { error, value } = addUserValidation(req.body)
   if (error) {
     logger.error(`Auth - register = ${error.details[0].message}`)
@@ -40,18 +34,18 @@ export async function registerUser(req: Request, res: Response): Promise<any> {
       .status(403)
       .send({ status: false, statusCode: 403, message: "This is not an e-mail and don't use spaces" })
   }
+
   try {
     const user = await findUserByEmail(value.email)
     if (user?.email) {
       logger.error('Auth - register = User already exists')
       return res.status(403).send({ status: false, statusCode: 403, message: 'User already exists' })
     }
+
     value.password = `${hashing(value.password)}`
-    const { name, email, createdAt } = await addUser(value)
+    const data = await addUser(value)
     logger.info('Success register user')
-    return res
-      .status(200)
-      .send({ status: true, statusCode: 200, message: 'Register user success', data: { name, email, createdAt } })
+    return res.status(200).send({ status: true, statusCode: 200, message: 'Register user success', data })
   } catch (error) {
     logger.error(`Auth - register = ${error}`)
     return res.status(422).send({ status: false, statusCode: 422, message: error })
@@ -59,8 +53,8 @@ export async function registerUser(req: Request, res: Response): Promise<any> {
 }
 
 // login
-export async function createSession(req: Request, res: Response): Promise<any> {
-  const { error, value } = createSessionValidation(req.body)
+export async function loginUser(req: Request, res: Response): Promise<any> {
+  const { error, value } = loginValidation(req.body)
   if (error) {
     logger.error(`Auth - create Session = ${error.details[0].message}`)
     return res.status(422).send({ status: false, statusCode: 422, message: error.details[0].message })
@@ -76,7 +70,7 @@ export async function createSession(req: Request, res: Response): Promise<any> {
       logger.error('Invalid email or password')
       return res.status(401).json({ status: false, statusCode: 401, message: 'Invalid email or password' })
     }
-    const accessToken = signJWT({ ...user }, { expiresIn: '3m' })
+    const accessToken = signJWT({ ...user }, { expiresIn: '10h' })
     const refreshToken = signJWT({ ...user }, { expiresIn: '1y' })
     logger.info('Success login')
     return res.status(200).send({
@@ -84,12 +78,12 @@ export async function createSession(req: Request, res: Response): Promise<any> {
       statusCode: 200,
       message: 'Login success',
       data: {
-        name: user.name,
+        id: user.id,
         email: user.email,
         accessToken,
         refreshToken,
         token_type: 'Bearer',
-        expires_in: '3 month'
+        expires_in: '10 hour'
       }
     })
   } catch (error) {
@@ -119,7 +113,7 @@ export async function refreshSession(req: Request, res: Response): Promise<any> 
       return res.status(422).send({ status: false, statusCode: 422, message: 'Invalid Token' })
     }
 
-    const accessToken = signJWT({ ...user }, { expiresIn: '3m' })
+    const accessToken = signJWT({ ...user }, { expiresIn: '10h' })
     logger.info('Success refresh session')
     return res.status(200).send({
       status: true,
@@ -133,27 +127,7 @@ export async function refreshSession(req: Request, res: Response): Promise<any> 
   }
 }
 
-export async function updateUser(req: Request, res: Response): Promise<any> {
-  const { error, value } = updateUserValidation(req.body)
-  if (error) {
-    logger.error(`Auth - Update User = ${error.details[0].message}`)
-    return res.status(422).send({ status: false, statusCode: 422, message: error.details[0].message })
-  }
-  try {
-    const user = await findUserByEmail(value.email)
-    if (!user) {
-      logger.error('Auth - Update User = Email not registered')
-      return res.status(401).json({ status: false, statusCode: 401, message: 'Email not registered' })
-    }
-    const result = await updateUserByEmail(value.email, value.name)
-    logger.info('Success update user')
-    return res.status(200).send({ status: true, statusCode: 200, message: 'Update user success', data: result })
-  } catch (error) {
-    logger.error(`Auth - Update User = ${error}`)
-    return res.status(422).send({ status: false, statusCode: 422, message: `${error}` })
-  }
-}
-
+// change password
 export async function updatePassword(req: Request, res: Response): Promise<any> {
   const { error, value } = updatePasswordValidation(req.body)
   if (error) {
@@ -161,7 +135,7 @@ export async function updatePassword(req: Request, res: Response): Promise<any> 
     return res.status(422).send({ status: false, statusCode: 422, message: error.details[0].message })
   }
   try {
-    const user = await findUserByEmail(value.email)
+    const user = res.locals.user
     if (!user) {
       logger.error('Auth - Update Password = Email not registered')
       return res.status(401).json({ status: false, statusCode: 401, message: 'Email not registered' })
@@ -177,10 +151,10 @@ export async function updatePassword(req: Request, res: Response): Promise<any> 
       return res.status(401).json({ status: false, statusCode: 401, message: 'Invalid password not same' })
     }
     value.confirm_password = `${hashing(value.confirm_password)}`
-    const result = await updatePasswordByEmail(value.email, value.confirm_password)
+    const result = await updatePasswordByEmail(user.id, value.confirm_password)
     logger.info('Success update password user')
     return res.status(200).send({ status: true, statusCode: 200, message: 'Update password success', data: result })
-  } catch (error: any) {
+  } catch (error) {
     logger.error(`Auth - Update Password = ${error}`)
     return res.status(422).send({ status: false, statusCode: 422, message: `${error}` })
   }
